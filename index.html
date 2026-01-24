@@ -1,7 +1,7 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="utf-8" />
+  <meta charset="UTF-8" />
   <title>Dominion Map</title>
 
   <link
@@ -9,42 +9,48 @@
     href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
   />
 
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="https://unpkg.com/h3-js@4.1.0/dist/h3-js.umd.js"></script>
-
   <style>
     body { margin: 0; }
-    #map { width: 100vw; height: 100vh; }
+    #map { height: 100vh; }
   </style>
 </head>
-
 <body>
-  <div id="map"></div>
 
-  <script>
-    const map = L.map("map").setView([40.4168, -3.7038], 13);
+<div id="map"></div>
 
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      attribution: "© OpenStreetMap",
-    }).addTo(map);
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/h3-js@4.1.0/dist/h3-js.umd.js"></script>
 
-    async function loadTerritories() {
-      const res = await fetch("https://TU_BACKEND_RAILWAY_URL/territories/");
-      const territories = await res.json();
+<script>
+  const BACKEND_URL = "https://dominion-backend-production.up.railway.app";
 
-      territories.forEach(t => {
-        const boundary = h3.h3ToGeoBoundary(t.territory_id, true);
-        const polygon = boundary.map(c => [c[0], c[1]]);
+  const map = L.map("map").setView([40.4168, -3.7038], 13); // Madrid default
+
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    attribution: "© OpenStreetMap"
+  }).addTo(map);
+
+  fetch(`${BACKEND_URL}/territories`)
+    .then(res => res.json())
+    .then(data => {
+      data.forEach(t => {
+        const boundary = h3.cellToBoundary(t.territory_id, true);
+
+        const polygon = boundary.map(p => [p[1], p[0]]);
 
         L.polygon(polygon, {
           color: "red",
-          weight: 1,
-          fillOpacity: 0.4,
-        }).addTo(map);
+          fillOpacity: Math.min(0.8, t.influence / 10)
+        })
+        .bindPopup(`
+          <b>Territory</b><br/>
+          User: ${t.user_id}<br/>
+          Influence: ${t.influence}
+        `)
+        .addTo(map);
       });
-    }
+    });
+</script>
 
-    loadTerritories();
-  </script>
 </body>
 </html>
