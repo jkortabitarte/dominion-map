@@ -80,7 +80,7 @@
       map.removeLayer(heatLayer);
       heatLayer = null;
     }
-
+    console.log("FETCH URL:", `${BACKEND_URL}/territories?resolution=${resolution}`);
     fetch("https://dominion-backend-production.up.railway.app/territories?resolution=" + resolution)
       .then(res => res.json())
       .then(data => {
