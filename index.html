@@ -74,6 +74,7 @@
   function loadTerritories() {
     const zoom = map.getZoom();
     const resolution = resolutionFromZoom(zoom);
+    let hasAutoZoomed = false;
 
     territoryLayer.clearLayers();
     if (heatLayer) {
@@ -134,7 +135,10 @@
           maxZoom: 17
         }).addTo(map);
 
-        map.fitBounds(allLatLngs);
+        if (!hasAutoZoomed) {
+  	  map.fitBounds(allLatLngs);
+  	  hasAutoZoomed = true;
+	}
       })
       .catch(err => {
         console.error("Error loading territories", err);
