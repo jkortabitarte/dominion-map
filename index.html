@@ -35,6 +35,7 @@
 
 <script>
   console.log("Dominion map v1.0.3");
+
   const BACKEND_URL = "https://dominion-backend-production.up.railway.app";
 
   const map = L.map("map").setView([0, 0], 2);
@@ -58,6 +59,9 @@
   let territoryLayer = L.layerGroup().addTo(map);
   let heatLayer = null;
 
+  /* ✅ Control de auto-zoom */
+  let hasAutoZoomed = false;
+
   /* ===============================
      🧠 H3 resolution según zoom
      =============================== */
@@ -74,15 +78,17 @@
   function loadTerritories() {
     const zoom = map.getZoom();
     const resolution = resolutionFromZoom(zoom);
-    let hasAutoZoomed = false;
+
+    const url = `${BACKEND_URL}/territories?resolution=${resolution}`;
+    console.log("FETCH URL:", url);
 
     territoryLayer.clearLayers();
     if (heatLayer) {
       map.removeLayer(heatLayer);
       heatLayer = null;
     }
-    console.log("FETCH URL:", `${BACKEND_URL}/territories?resolution=${resolution}`);
-    fetch("https://dominion-backend-production.up.railway.app/territories?resolution=" + resolution)
+
+    fetch(url)
       .then(res => res.json())
       .then(data => {
         console.log("Territories:", data);
@@ -132,13 +138,15 @@
         heatLayer = L.heatLayer(heatPoints, {
           radius: 30,
           blur: 20,
-          maxZoom: 17
+          maxZoom: 17,
+          preferCanvas: true
         }).addTo(map);
 
+        /* 🎯 Auto-zoom SOLO la primera vez */
         if (!hasAutoZoomed) {
-  	  map.fitBounds(allLatLngs);
-  	  hasAutoZoomed = true;
-	}
+          map.fitBounds(allLatLngs);
+          hasAutoZoomed = true;
+        }
       })
       .catch(err => {
         console.error("Error loading territories", err);
