@@ -57,6 +57,43 @@
       height: 100vh;
       width: 100%;
     }
+    .modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 2000;
+    }
+
+    .modal.hidden {
+      display: none;
+    }
+
+    .modal-content {
+      background: #1a1a1a;
+      padding: 20px;
+      border-radius: 12px;
+      width: 90%;
+      max-width: 360px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .modal-content input {
+      padding: 10px;
+      border-radius: 6px;
+      border: 1px solid #333;
+      background: #111;
+      color: white;
+    }
+
+    .modal-content button {
+      padding: 10px;
+    }
+
   </style>
 </head>
 <body>
@@ -107,12 +144,68 @@
   }
 
   function showLogin() {
-    alert("Implementa aquí tu modal de login 😉\n(backend ya está listo)");
+    document.getElementById("login-modal").classList.remove("hidden");
   }
 
   function showRegister() {
-    alert("Implementa aquí tu modal de registro 😉");
+    document.getElementById("register-modal").classList.remove("hidden");
   }
+  
+  function closeModals() {
+    document.getElementById("login-modal").classList.add("hidden");
+    document.getElementById("register-modal").classList.add("hidden");
+  }
+
+  async function login() {
+    const email = document.getElementById("login-email").value;
+    const password = document.getElementById("login-password").value;
+
+    const form = new URLSearchParams();
+    form.append("username", email);
+    form.append("password", password);
+
+    const res = await fetch(`${BACKEND_URL}/auth/login`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded"
+      },
+      body: form
+    });
+
+    if (!res.ok) {
+      alert("Invalid credentials");
+      return;
+    }
+
+    const data = await res.json();
+    localStorage.setItem("token", data.access_token);
+
+    closeModals();
+    window.location.reload(); // recarga como usuario logueado
+  }
+
+  async function register() {
+    const email = document.getElementById("register-email").value;
+    const username = document.getElementById("register-username").value;
+    const password = document.getElementById("register-password").value;
+
+    const res = await fetch(
+      `${BACKEND_URL}/auth/register?email=${email}&username=${username}&password=${password}`,
+      { method: "POST" }
+    );
+
+    if (!res.ok) {
+      alert("Error creating account");
+      return;
+    }
+
+    const data = await res.json();
+    localStorage.setItem("token", data.access_token);
+
+    closeModals();
+    window.location.reload();
+  }
+
 
   /* ===============================
      🌍 Map init
@@ -210,6 +303,28 @@
   map.on("zoomend", loadTerritories);
   loadTerritories();
 </script>
+<!-- LOGIN MODAL -->
+<div id="login-modal" class="modal hidden">
+  <div class="modal-content">
+    <h2>Login</h2>
+    <input id="login-email" type="email" placeholder="Email" />
+    <input id="login-password" type="password" placeholder="Password" />
+    <button onclick="login()">Login</button>
+    <button class="secondary" onclick="closeModals()">Cancel</button>
+  </div>
+</div>
+
+<!-- REGISTER MODAL -->
+<div id="register-modal" class="modal hidden">
+  <div class="modal-content">
+    <h2>Register</h2>
+    <input id="register-email" type="email" placeholder="Email" />
+    <input id="register-username" type="text" placeholder="Username" />
+    <input id="register-password" type="password" placeholder="Password" />
+    <button onclick="register()">Create account</button>
+    <button class="secondary" onclick="closeModals()">Cancel</button>
+  </div>
+</div>
 
 </body>
 </html>
