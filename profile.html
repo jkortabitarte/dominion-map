@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Dominion · Profile</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <style>
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #111;
+      color: #fff;
+      padding: 16px;
+    }
+
+    h1 {
+      margin-top: 0;
+    }
+
+    .card {
+      background: #1a1a1a;
+      border-radius: 10px;
+      padding: 16px;
+      margin-bottom: 16px;
+      border: 1px solid #333;
+    }
+
+    .row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: bold;
+    }
+
+    .dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+    }
+
+    .green { background: #4caf50; }
+    .red { background: #f44336; }
+
+    button {
+      padding: 10px 14px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    .primary {
+      background: #4caf50;
+      color: #000;
+    }
+
+    .secondary {
+      background: #333;
+      color: #fff;
+    }
+
+    .feedback {
+      margin-top: 12px;
+      font-size: 0.9rem;
+      opacity: 0.9;
+    }
+  </style>
+</head>
+<body>
+
+<h1>👤 Profile</h1>
+
+<div class="card">
+  <div class="row">
+    <div>
+      <div><strong id="username">—</strong></div>
+      <div id="email" style="opacity:0.7">—</div>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="row">
+    <div class="status">
+      <div id="strava-dot" class="dot red"></div>
+      <span id="strava-status">Strava not connected</span>
+    </div>
+    <button id="connect-btn" class="primary" onclick="connectStrava()">
+      Connect Strava
+    </button>
+  </div>
+
+  <div style="margin-top:12px">
+    <button
+      id="import-btn"
+      class="secondary"
+      onclick="importActivities()"
+      disabled
+    >
+      Import activities
+    </button>
+  </div>
+
+  <div id="feedback" class="feedback"></div>
+</div>
+
+<button onclick="goBack()" class="secondary">← Back to map</button>
+
+<script>
+  const BACKEND_URL = "https://dominion-backend-production.up.railway.app";
+  const token = localStorage.getItem("token");
+
+  if (!token) {
+    window.location.href = "index.html";
+  }
+
+  const feedback = document.getElementById("feedback");
+
+  function setFeedback(msg) {
+    feedback.innerText = msg;
+  }
+
+  async function loadProfile() {
+    const res = await fetch(`${BACKEND_URL}/users/me`, {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
+
+    const user = await res.json();
+
+    document.getElementById("username").innerText = user.username;
+    document.getElementById("email").innerText = user.email;
+
+    if (user.strava_connected) {
+      document.getElementById("strava-dot").className = "dot green";
+      document.getElementById("strava-status").innerText = "Strava connected";
+      document.getElementById("connect-btn").style.display = "none";
+      document.getElementById("import-btn").disabled = false;
+    }
+  }
+
+  async function connectStrava() {
+    const res = await fetch(`${BACKEND_URL}/strava/connect`, {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
+
+    const data = await res.json();
+    window.location.href = data.auth_url;
+  }
+
+  async function importActivities() {
+    setFeedback("⏳ Importing activities…");
+
+    const res = await fetch(`${BACKEND_URL}/strava/import`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
+
+    const data = await res.json();
+
+    setFeedback(
+      `✅ Imported ${data.imported} activities · Skipped ${data.skipped}`
+    );
+  }
+
+  function goBack() {
+    window.location.href = "dashboard.html";
+  }
+
+  // 🔁 Init
+  loadProfile();
+
+  // 🎉 Feedback from callback
+  const params = new URLSearchParams(window.location.search);
+  if (params.get("strava") === "connected") {
+    setFeedback("✅ Strava connected successfully");
+  }
+</script>
+
+</body>
+</html>
