@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Dominion · Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- Leaflet -->
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  />
+
+  <style>
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #111;
+      color: #fff;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 16px;
+      background: #1a1a1a;
+      border-bottom: 1px solid #333;
+    }
+
+    header h1 {
+      font-size: 1.1rem;
+      margin: 0;
+    }
+
+    header button {
+      background: #4caf50;
+      border: none;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    header button.logout {
+      background: transparent;
+      color: #f44336;
+      border: 1px solid #f44336;
+      margin-left: 8px;
+    }
+
+    #map {
+      height: calc(100vh - 56px);
+      width: 100%;
+    }
+
+    /* Desktop layout */
+    @media (min-width: 768px) {
+      header h1 {
+        font-size: 1.3rem;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>🌍 Dominion</h1>
+  <div>
+    <button onclick="connectStrava()">Connect Strava</button>
+    <button class="logout" onclick="logout()">Logout</button>
+  </div>
+</header>
+
+<div id="map"></div>
+
+<!-- Scripts -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/h3-js@4.1.0/dist/h3-js.umd.js"></script>
+<script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script>
+
+<script>
+  const BACKEND_URL = "https://dominion-backend-production.up.railway.app";
+  const token = localStorage.getItem("token");
+
+  // 🔐 Auth guard
+  if (!token) {
+    window.location.href = "index.html";
+  }
+
+  // 🌍 Map init
+  const map = L.map("map").setView([40.4168, -3.7038], 4);
+
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    attribution: "© OpenStreetMap"
+  }).addTo(map);
+
+  let territoryLayer = L.layerGroup().addTo(map);
+  let heatLayer = null;
+
+  // 🎨 Color por usuario
+  function colorFromUser(userId) {
+    let hash = 0;
+    for (let i = 0; i < userId.length; i++) {
+      hash = userId.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    const hue = Math.abs(hash) % 360;
+    return `hsl(${hue}, 70%, 50%)`;
+  }
+
+  // 🧠 Resolución H3 según zoom
+  function resolutionFromZoom(zoom) {
+    if (zoom < 8) return 7;
+    if (zoom < 11) return 8;
+    if (zoom < 14) return 9;
+    return 10;
+  }
+
+  // 🔄 Load territories
+  async function loadTerritories() {
+    const resolution = resolutionFromZoom(map.getZoom());
+
+    territoryLayer.clearLayers();
+    if (heatLayer) {
+      map.removeLayer(heatLayer);
+      heatLayer = null;
+    }
+
+    try {
+      const res = await fetch(
+        `${BACKEND_URL}/territories?resolution=${resolution}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
+
+      const data = await res.json();
+      if (!Array.isArray(data)) return;
+
+      const heatPoints = [];
+
+      data.forEach(t => {
+        const boundary = h3.cellToBoundary(t.territory_id, true);
+        const polygon = boundary.map(p => [p[1], p[0]]);
+        const color = colorFromUser(t.owner);
+
+        const poly = L.polygon(polygon, {
+          color,
+          weight: 2,
+          fillColor: color,
+          fillOpacity: Math.min(0.9, t.influence / 5)
+        })
+        .bindPopup(`
+          <b>Territory</b><br/>
+          Owner: ${t.owner}<br/>
+          Influence: ${t.influence}
+        `);
+
+        poly.addTo(territoryLayer);
+
+        const [lat, lng] = h3.cellToLatLng(t.territory_id);
+        heatPoints.push([lat, lng, t.influence]);
+      });
+
+      heatLayer = L.heatLayer(heatPoints, {
+        radius: 30,
+        blur: 20,
+        maxZoom: 17
+      }).addTo(map);
+
+    } catch (err) {
+      console.error("Error loading territories", err);
+    }
+  }
+
+  map.on("zoomend", loadTerritories);
+  loadTerritories();
+
+  // 🔴 STRAVA CONNECT
+  function connectStrava() {
+    window.location.href = `${BACKEND_URL}/strava/connect`;
+  }
+
+  // 🚪 LOGOUT
+  function logout() {
+    localStorage.removeItem("token");
+    window.location.href = "index.html";
+  }
+</script>
+
+</body>
+</html>
