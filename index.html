@@ -2,162 +2,216 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Dominion Map</title>
-
-  <link
-    rel="stylesheet"
-    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-  />
+  <title>Dominion · Login</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
   <style>
-    body { margin: 0; }
-    #map { height: 100vh; }
-
-    /* 🔥 Animación de territorios fuertes */
-    .strong {
-      animation: pulse 2s infinite;
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      background: linear-gradient(135deg, #111, #222);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
     }
 
-    @keyframes pulse {
-      0% { opacity: 0.6; }
-      50% { opacity: 0.95; }
-      100% { opacity: 0.6; }
+    .container {
+      width: 100%;
+      max-width: 380px;
+      padding: 24px;
+      background: #1a1a1a;
+      border-radius: 12px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 8px;
+    }
+
+    p.subtitle {
+      text-align: center;
+      font-size: 0.9rem;
+      opacity: 0.8;
+      margin-bottom: 24px;
+    }
+
+    input {
+      width: 100%;
+      padding: 12px;
+      margin-bottom: 12px;
+      border-radius: 8px;
+      border: none;
+      background: #2a2a2a;
+      color: #fff;
+      font-size: 1rem;
+    }
+
+    button {
+      width: 100%;
+      padding: 12px;
+      border-radius: 8px;
+      border: none;
+      background: #4caf50;
+      color: #000;
+      font-weight: bold;
+      font-size: 1rem;
+      cursor: pointer;
+      margin-top: 8px;
+    }
+
+    button.secondary {
+      background: transparent;
+      color: #4caf50;
+      border: 1px solid #4caf50;
+    }
+
+    .toggle {
+      text-align: center;
+      margin-top: 16px;
+      font-size: 0.9rem;
+      cursor: pointer;
+      color: #4caf50;
+    }
+
+    .error {
+      margin-top: 12px;
+      color: #ff6b6b;
+      font-size: 0.9rem;
+      text-align: center;
     }
   </style>
 </head>
 <body>
 
-<div id="map"></div>
+<div class="container">
+  <h1>Dominion</h1>
+  <p class="subtitle">Conquer the world with your activities</p>
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="https://unpkg.com/h3-js@4.1.0/dist/h3-js.umd.js"></script>
-<script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script>
+  <!-- LOGIN FORM -->
+  <div id="login-form">
+    <input id="login-email" type="email" placeholder="Email" />
+    <input id="login-password" type="password" placeholder="Password" />
+    <button onclick="login()">Login</button>
+
+    <div class="toggle" onclick="showRegister()">Create an account</div>
+  </div>
+
+  <!-- REGISTER FORM -->
+  <div id="register-form" style="display:none">
+    <input id="register-email" type="email" placeholder="Email" />
+    <input id="register-username" type="text" placeholder="Username" />
+    <input id="register-password" type="password" placeholder="Password" />
+    <button onclick="register()">Register</button>
+
+    <button class="secondary" onclick="showLogin()">Back to login</button>
+  </div>
+
+  <div id="error" class="error"></div>
+</div>
 
 <script>
-  console.log("Dominion map v1.0.3");
-
   const BACKEND_URL = "https://dominion-backend-production.up.railway.app";
 
-  const map = L.map("map").setView([0, 0], 2);
-
-  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-    attribution: "© OpenStreetMap"
-  }).addTo(map);
-
-  /* ===============================
-     🎨 Color consistente por usuario
-     =============================== */
-  function colorFromUser(userId) {
-    let hash = 0;
-    for (let i = 0; i < userId.length; i++) {
-      hash = userId.charCodeAt(i) + ((hash << 5) - hash);
-    }
-    const hue = Math.abs(hash) % 360;
-    return `hsl(${hue}, 70%, 50%)`;
+  // 🔄 Toggle forms
+  function showRegister() {
+    document.getElementById("login-form").style.display = "none";
+    document.getElementById("register-form").style.display = "block";
+    clearError();
   }
 
-  let territoryLayer = L.layerGroup().addTo(map);
-  let heatLayer = null;
-
-  /* ✅ Control de auto-zoom */
-  let hasAutoZoomed = false;
-
-  /* ===============================
-     🧠 H3 resolution según zoom
-     =============================== */
-  function resolutionFromZoom(zoom) {
-    if (zoom < 9) return 7;
-    if (zoom < 12) return 8;
-    if (zoom < 15) return 9;
-    return 10;
+  function showLogin() {
+    document.getElementById("register-form").style.display = "none";
+    document.getElementById("login-form").style.display = "block";
+    clearError();
   }
 
-  /* ===============================
-     🔄 Cargar territorios
-     =============================== */
-  function loadTerritories() {
-    const zoom = map.getZoom();
-    const resolution = resolutionFromZoom(zoom);
+  function showError(msg) {
+    document.getElementById("error").innerText = msg;
+  }
 
-    const url = `${BACKEND_URL}/territories?resolution=${resolution}`;
-    console.log("FETCH URL:", url);
+  function clearError() {
+    document.getElementById("error").innerText = "";
+  }
 
-    territoryLayer.clearLayers();
-    if (heatLayer) {
-      map.removeLayer(heatLayer);
-      heatLayer = null;
+  // 🔐 LOGIN
+  async function login() {
+    clearError();
+
+    const email = document.getElementById("login-email").value;
+    const password = document.getElementById("login-password").value;
+
+    if (!email || !password) {
+      showError("Please fill all fields");
+      return;
     }
 
-    fetch(url)
-      .then(res => res.json())
-      .then(data => {
-        console.log("Territories:", data);
+    const formData = new URLSearchParams();
+    formData.append("username", email);
+    formData.append("password", password);
 
-        if (!data.length) return;
-
-        const allLatLngs = [];
-        const heatPoints = [];
-
-        data.forEach(t => {
-          const boundary = h3.cellToBoundary(t.territory_id, true);
-
-          const polygon = boundary.map(p => {
-            const latlng = [p[1], p[0]];
-            allLatLngs.push(latlng);
-            return latlng;
-          });
-
-          const color = colorFromUser(t.owner);
-
-          const poly = L.polygon(polygon, {
-            color,
-            weight: 2,
-            fillColor: color,
-            fillOpacity: Math.min(0.9, t.influence / 5)
-          })
-          .bindPopup(`
-            <b>Territory</b><br/>
-            Owner: ${t.owner}<br/>
-            Influence: ${t.influence}
-          `);
-
-          // ✨ Animación para territorios dominantes
-          poly.on("add", () => {
-            if (t.influence >= 5) {
-              poly.getElement()?.classList.add("strong");
-            }
-          });
-
-          poly.addTo(territoryLayer);
-
-          // 🔥 Heatmap
-          const [lat, lng] = h3.cellToLatLng(t.territory_id);
-          heatPoints.push([lat, lng, t.influence]);
-        });
-
-        heatLayer = L.heatLayer(heatPoints, {
-          radius: 30,
-          blur: 20,
-          maxZoom: 17,
-          preferCanvas: true
-        }).addTo(map);
-
-        /* 🎯 Auto-zoom SOLO la primera vez */
-        if (!hasAutoZoomed) {
-          map.fitBounds(allLatLngs);
-          hasAutoZoomed = true;
-        }
-      })
-      .catch(err => {
-        console.error("Error loading territories", err);
+    try {
+      const res = await fetch(`${BACKEND_URL}/auth/login`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded"
+        },
+        body: formData
       });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        showError(data.detail || "Login failed");
+        return;
+      }
+
+      localStorage.setItem("token", data.access_token);
+      window.location.href = "dashboard.html";
+
+    } catch (err) {
+      showError("Network error");
+    }
   }
 
-  // 🔁 Reload when zoom changes
-  map.on("zoomend", loadTerritories);
+  // 🆕 REGISTER
+  async function register() {
+    clearError();
 
-  // 🚀 Initial load
-  loadTerritories();
+    const email = document.getElementById("register-email").value;
+    const username = document.getElementById("register-username").value;
+    const password = document.getElementById("register-password").value;
+
+    if (!email || !username || !password) {
+      showError("Please fill all fields");
+      return;
+    }
+
+    try {
+      const res = await fetch(`${BACKEND_URL}/auth/register`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ email, username, password })
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        showError(data.detail || "Register failed");
+        return;
+      }
+
+      localStorage.setItem("token", data.access_token);
+      window.location.href = "dashboard.html";
+
+    } catch (err) {
+      showError("Network error");
+    }
+  }
 </script>
 
 </body>
