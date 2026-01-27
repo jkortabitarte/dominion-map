@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Dominion Map</title>
+
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  />
+
+  <style>
+    body { margin: 0; }
+    #map { height: 100vh; }
+
+    /* 🔥 Animación de territorios fuertes */
+    .strong {
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0% { opacity: 0.6; }
+      50% { opacity: 0.95; }
+      100% { opacity: 0.6; }
+    }
+  </style>
+</head>
+<body>
+
+<div id="map"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/h3-js@4.1.0/dist/h3-js.umd.js"></script>
+<script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script>
+
+<script>
+  console.log("Dominion map v1.0.3");
+
+  const BACKEND_URL = "https://dominion-backend-production.up.railway.app";
+
+  const map = L.map("map").setView([0, 0], 2);
+
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    attribution: "© OpenStreetMap"
+  }).addTo(map);
+
+  /* ===============================
+     🎨 Color consistente por usuario
+     =============================== */
+  function colorFromUser(userId) {
+    let hash = 0;
+    for (let i = 0; i < userId.length; i++) {
+      hash = userId.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    const hue = Math.abs(hash) % 360;
+    return `hsl(${hue}, 70%, 50%)`;
+  }
+
+  let territoryLayer = L.layerGroup().addTo(map);
+  let heatLayer = null;
+
+  /* ✅ Control de auto-zoom */
+  let hasAutoZoomed = false;
+
+  /* ===============================
+     🧠 H3 resolution según zoom
+     =============================== */
+  function resolutionFromZoom(zoom) {
+    if (zoom < 9) return 7;
+    if (zoom < 12) return 8;
+    if (zoom < 15) return 9;
+    return 10;
+  }
+
+  /* ===============================
+     🔄 Cargar territorios
+     =============================== */
+  function loadTerritories() {
+    const zoom = map.getZoom();
+    const resolution = resolutionFromZoom(zoom);
+
+    const url = `${BACKEND_URL}/territories?resolution=${resolution}`;
+    console.log("FETCH URL:", url);
+
+    territoryLayer.clearLayers();
+    if (heatLayer) {
+      map.removeLayer(heatLayer);
+      heatLayer = null;
+    }
+
+    fetch(url)
+      .then(res => res.json())
+      .then(data => {
+        console.log("Territories:", data);
+
+        if (!data.length) return;
+
+        const allLatLngs = [];
+        const heatPoints = [];
+
+        data.forEach(t => {
+          const boundary = h3.cellToBoundary(t.territory_id, true);
+
+          const polygon = boundary.map(p => {
+            const latlng = [p[1], p[0]];
+            allLatLngs.push(latlng);
+            return latlng;
+          });
+
+          const color = colorFromUser(t.owner);
+
+          const poly = L.polygon(polygon, {
+            color,
+            weight: 2,
+            fillColor: color,
+            fillOpacity: Math.min(0.9, t.influence / 5)
+          })
+          .bindPopup(`
+            <b>Territory</b><br/>
+            Owner: ${t.owner}<br/>
+            Influence: ${t.influence}
+          `);
+
+          // ✨ Animación para territorios dominantes
+          poly.on("add", () => {
+            if (t.influence >= 5) {
+              poly.getElement()?.classList.add("strong");
+            }
+          });
+
+          poly.addTo(territoryLayer);
+
+          // 🔥 Heatmap
+          const [lat, lng] = h3.cellToLatLng(t.territory_id);
+          heatPoints.push([lat, lng, t.influence]);
+        });
+
+        heatLayer = L.heatLayer(heatPoints, {
+          radius: 30,
+          blur: 20,
+          maxZoom: 17,
+          preferCanvas: true
+        }).addTo(map);
+
+        /* 🎯 Auto-zoom SOLO la primera vez */
+        if (!hasAutoZoomed) {
+          map.fitBounds(allLatLngs);
+          hasAutoZoomed = true;
+        }
+      })
+      .catch(err => {
+        console.error("Error loading territories", err);
+      });
+  }
+
+  // 🔁 Reload when zoom changes
+  map.on("zoomend", loadTerritories);
+
+  // 🚀 Initial load
+  loadTerritories();
+</script>
+
+</body>
+</html>
