@@ -19,6 +19,10 @@
       margin-bottom: 16px;
     }
 
+    h3 {
+      margin-top: 0;
+    }
+
     .card {
       background: #1a1a1a;
       border: 1px solid #333;
@@ -35,12 +39,18 @@
       font-weight: bold;
       cursor: pointer;
       margin-right: 8px;
+      margin-top: 8px;
     }
 
     button.secondary {
       background: transparent;
       color: #fff;
       border: 1px solid #555;
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
     }
 
     .status {
@@ -55,19 +65,40 @@
     .red {
       color: #f44336;
     }
+
+    .muted {
+      color: #aaa;
+      font-size: 0.9rem;
+    }
   </style>
 </head>
 <body>
 
 <h1>👤 Profile</h1>
 
+<!-- USER INFO -->
+<div class="card">
+  <h3>User info</h3>
+  <div id="user-info" class="muted">Loading…</div>
+</div>
+
+<!-- STRAVA -->
 <div class="card">
   <h3>Strava</h3>
   <p id="strava-status" class="status">Checking status…</p>
-  <button onclick="connectStrava()">Connect Strava</button>
-  <button class="secondary" onclick="importActivities()">Import activities</button>
+
+  <button id="connect-btn" onclick="connectStrava()">Connect Strava</button>
+  <button
+    id="import-btn"
+    class="secondary"
+    onclick="importActivities()"
+    style="display:none"
+  >
+    Import activities
+  </button>
 </div>
 
+<!-- NAV -->
 <div class="card">
   <button class="secondary" onclick="goBack()">← Back to map</button>
 </div>
@@ -80,8 +111,54 @@
     window.location.href = "index.html";
   }
 
+  const userInfoEl = document.getElementById("user-info");
+  const statusEl = document.getElementById("strava-status");
+  const connectBtn = document.getElementById("connect-btn");
+  const importBtn = document.getElementById("import-btn");
+
   function goBack() {
     window.location.href = "index.html";
+  }
+
+  // 🔐 Load profile
+  async function loadProfile() {
+    try {
+      const res = await fetch(`${BACKEND_URL}/users/me`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+
+      if (!res.ok) throw new Error("Unauthorized");
+
+      const user = await res.json();
+
+      // 👤 User info
+      userInfoEl.innerHTML = `
+        <p><b>Username:</b> ${user.username}</p>
+        <p><b>Email:</b> ${user.email}</p>
+        <p><b>Joined:</b> ${new Date(user.created_at).toLocaleDateString()}</p>
+      `;
+
+      // 🟢🔴 Strava status
+      if (user.strava_connected) {
+        statusEl.textContent = "🟢 Strava connected";
+        statusEl.className = "status green";
+        connectBtn.style.display = "none";
+        importBtn.style.display = "inline-block";
+      } else {
+        statusEl.textContent = "🔴 Strava not connected";
+        statusEl.className = "status red";
+        connectBtn.style.display = "inline-block";
+        importBtn.style.display = "none";
+      }
+
+    } catch (err) {
+      console.error(err);
+      alert("Session expired");
+      localStorage.removeItem("token");
+      window.location.href = "index.html";
+    }
   }
 
   async function connectStrava() {
@@ -96,44 +173,30 @@
   }
 
   async function importActivities() {
-    const res = await fetch(`${BACKEND_URL}/strava/import`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`
-      }
-    });
+    importBtn.disabled = true;
+    importBtn.textContent = "Importing…";
 
-    const data = await res.json();
-    alert(`Imported: ${data.imported}\nSkipped: ${data.skipped}`);
-  }
-
-  // 🔎 Check Strava status
-  async function checkStatus() {
     try {
-      const res = await fetch(`${BACKEND_URL}/users/me`, {
+      const res = await fetch(`${BACKEND_URL}/strava/import`, {
+        method: "POST",
         headers: {
           Authorization: `Bearer ${token}`
         }
       });
 
-      const user = await res.json();
-
-      const status = document.getElementById("strava-status");
-
-      if (user.strava_athlete_id) {
-        status.innerHTML = "🟢 Strava connected";
-        status.className = "status green";
-      } else {
-        status.innerHTML = "🔴 Strava not connected";
-        status.className = "status red";
-      }
+      const data = await res.json();
+      alert(
+        `Import finished\n\nImported: ${data.imported}\nSkipped: ${data.skipped}`
+      );
     } catch {
-      document.getElementById("strava-status").innerText =
-        "Unable to fetch user status";
+      alert("Error importing activities");
+    } finally {
+      importBtn.disabled = false;
+      importBtn.textContent = "Import activities";
     }
   }
 
-  checkStatus();
+  loadProfile();
 </script>
 
 </body>
