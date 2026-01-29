@@ -4,7 +4,15 @@
   <meta charset="UTF-8" />
   <title>Dominion · Profile</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
+  <div class="card">
+   <h3>📊 Your stats</h3>
+   <ul id="stats">
+     <li>Activities: …</li>
+     <li>Hexes conquered: …</li>
+     <li>Total influence: …</li>
+     <li>Last activity: …</li>
+   </ul>
+  </div>
   <style>
     body {
       margin: 0;
@@ -197,6 +205,29 @@
   }
 
   loadProfile();
+  async function loadStats() {
+    try {
+      const res = await fetch(`${BACKEND_URL}/users/me/stats`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      })
+
+      const stats = await res.json()
+
+      document.getElementById("stats").innerHTML = `
+        <li>🏃 Activities: <b>${stats.activities}</b></li>
+        <li>⬡ Hexes conquered: <b>${stats.hexes}</b></li>
+        <li>🔥 Total influence: <b>${stats.influence}</b></li>
+        <li>🕒 Last activity: <b>${stats.last_activity ?? "—"}</b></li>
+    `
+    } catch {
+      document.getElementById("stats").innerHTML =
+        "<li>Unable to load stats</li>"
+    }
+  }
+
+  loadStats()
 </script>
 
 </body>
