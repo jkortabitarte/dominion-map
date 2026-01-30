@@ -2,334 +2,131 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Dominion</title>
+  <title>Dominion · Conquer your territory</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
-  <!-- Leaflet -->
-  <link
-    rel="stylesheet"
-    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-  />
 
   <style>
     body {
       margin: 0;
       font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-      background: #111;
+      background: radial-gradient(circle at top, #1a1a1a, #000);
       color: #fff;
     }
 
     header {
-      position: absolute;
-      top: 0;
-      width: 100%;
-      z-index: 1000;
-      background: rgba(0,0,0,0.50);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 10px 16px;
-      box-sizing: border-box;
+      padding: 20px;
+      text-align: center;
+    }
+
+    header img {
+      width: 64px;
+      height: 64px;
     }
 
     header h1 {
-      font-size: 1.1rem;
+      margin: 12px 0 4px;
+      font-size: 2rem;
+    }
+
+    header p {
+      color: #aaa;
       margin: 0;
     }
 
-    header button {
+    .hero {
+      padding: 40px 20px;
+      text-align: center;
+      max-width: 900px;
+      margin: auto;
+    }
+
+    .hero h2 {
+      font-size: 1.8rem;
+      margin-bottom: 12px;
+    }
+
+    .hero p {
+      color: #ccc;
+      font-size: 1.05rem;
+    }
+
+    .actions {
+      margin-top: 28px;
+    }
+
+    button {
       background: #4caf50;
       border: none;
-      padding: 6px 10px;
-      border-radius: 6px;
-      font-weight: bold;
+      padding: 14px 20px;
+      border-radius: 10px;
+      font-size: 1rem;
+      font-weight: 600;
       cursor: pointer;
-      margin-left: 6px;
+      margin: 8px;
     }
 
-    header button.secondary {
+    button.secondary {
       background: transparent;
-      color: #fff;
       border: 1px solid #555;
+      color: #fff;
     }
 
-    #map {
-      height: 100vh;
-      width: 100%;
-    }
-    .modal {
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.7);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 2000;
-    }
-
-    .modal.hidden {
-      display: none;
-    }
-
-    .modal-content {
-      background: #1a1a1a;
+    footer {
+      margin-top: 60px;
       padding: 20px;
-      border-radius: 12px;
-      width: 90%;
-      max-width: 360px;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
+      text-align: center;
+      border-top: 1px solid #222;
+      font-size: 0.85rem;
+      color: #777;
     }
 
-    .modal-content input {
-      padding: 10px;
-      border-radius: 6px;
-      border: 1px solid #333;
-      background: #111;
-      color: white;
+    footer a {
+      color: #4caf50;
+      text-decoration: none;
     }
-
-    .modal-content button {
-      padding: 10px;
-    }
-
   </style>
 </head>
 <body>
 
 <header>
+  <!-- Reemplaza src cuando tengas el logo final -->
   <img src="logo.png" alt="Dominion logo" />
-  <h1>🌍 Dominion</h1>
-  <div id="auth-buttons"></div>
+  <h1>Dominion</h1>
+  <p>Conquer your territory</p>
 </header>
 
-<div id="map"></div>
+<section class="hero">
+  <h2>Your activities shape the map</h2>
+  <p>
+    Dominion transforms your real-world activities into territorial influence.
+    Connect Strava, explore new areas, and expand your domain.
+  </p>
 
-<!-- Scripts -->
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="https://unpkg.com/h3-js@4.1.0/dist/h3-js.umd.js"></script>
-<script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script>
+  <div class="actions">
+    <button onclick="goLogin()">Login</button>
+    <button class="secondary" onclick="goRegister()">Create account</button>
+  </div>
+</section>
+
+<footer>
+  © 2026 Dominion ·
+  <a href="privacy.html">Privacy Policy</a>
+</footer>
 
 <script>
-  console.log("Dominion map v1.1");
-
-  const BACKEND_URL = "https://dominion-backend-production.up.railway.app";
-  const token = localStorage.getItem("token");
-  const isAuthenticated = !!token;
-
-  /* ===============================
-     🔐 Header buttons
-     =============================== */
-  const authButtons = document.getElementById("auth-buttons");
-
-  if (!isAuthenticated) {
-    authButtons.innerHTML = `
-      <button onclick="showLogin()">Login</button>
-      <button class="secondary" onclick="showRegister()">Register</button>
-    `;
-  } else {
-    authButtons.innerHTML = `
-      <button onclick="goProfile()">Profile</button>
-      <button class="secondary" onclick="logout()">Logout</button>
-    `;
+  function goLogin() {
+    window.location.href = "login.html";
   }
 
-  function goProfile() {
-    window.location.href = "profile.html";
+  function goRegister() {
+    window.location.href = "register.html";
   }
 
-  function logout() {
-    localStorage.removeItem("token");
-    window.location.reload();
+  // Auto-redirect if already logged in
+  if (localStorage.getItem("token")) {
+    window.location.href = "index.html";
   }
-
-  function showLogin() {
-    document.getElementById("login-modal").classList.remove("hidden");
-  }
-
-  function showRegister() {
-    document.getElementById("register-modal").classList.remove("hidden");
-  }
-  
-  function closeModals() {
-    document.getElementById("login-modal").classList.add("hidden");
-    document.getElementById("register-modal").classList.add("hidden");
-  }
-
-  async function login() {
-    const email = document.getElementById("login-email").value;
-    const password = document.getElementById("login-password").value;
-
-    const form = new URLSearchParams();
-    form.append("username", email);
-    form.append("password", password);
-
-    const res = await fetch(`${BACKEND_URL}/auth/login`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded"
-      },
-      body: form
-    });
-
-    if (!res.ok) {
-      alert("Invalid credentials");
-      return;
-    }
-
-    const data = await res.json();
-    localStorage.setItem("token", data.access_token);
-
-    closeModals();
-    window.location.reload(); // recarga como usuario logueado
-  }
-
-  async function register() {
-    const email = document.getElementById("register-email").value;
-    const username = document.getElementById("register-username").value;
-    const password = document.getElementById("register-password").value;
-
-    const res = await fetch(
-      `${BACKEND_URL}/auth/register?email=${email}&username=${username}&password=${password}`,
-      { method: "POST" }
-    );
-
-    if (!res.ok) {
-      alert("Error creating account");
-      return;
-    }
-
-    const data = await res.json();
-    localStorage.setItem("token", data.access_token);
-
-    closeModals();
-    window.location.reload();
-  }
-
-
-  /* ===============================
-     🌍 Map init
-     =============================== */
-  const map = L.map("map").setView([40.4168, -3.7038], 4);
-
-  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-    attribution: "© OpenStreetMap"
-  }).addTo(map);
-
-  let territoryLayer = L.layerGroup().addTo(map);
-  let heatLayer = null;
-
-  function colorFromUser(userId) {
-    let hash = 0;
-    for (let i = 0; i < userId.length; i++) {
-      hash = userId.charCodeAt(i) + ((hash << 5) - hash);
-    }
-    const hue = Math.abs(hash) % 360;
-    return `hsl(${hue}, 70%, 50%)`;
-  }
-
-  function resolutionFromZoom(zoom) {
-    if (zoom < 8) return 7;
-    if (zoom < 11) return 8;
-    if (zoom < 14) return 9;
-    return 10;
-  }
-
-  async function loadTerritories() {
-    const resolution = resolutionFromZoom(map.getZoom());
-
-    territoryLayer.clearLayers();
-    if (heatLayer) {
-      map.removeLayer(heatLayer);
-      heatLayer = null;
-    }
-
-    const headers = isAuthenticated
-      ? { Authorization: `Bearer ${token}` }
-      : {};
-
-    try {
-      const res = await fetch(
-        `${BACKEND_URL}/territories?resolution=${resolution}`,
-        { headers }
-      );
-
-      const data = await res.json();
-      if (!Array.isArray(data)) return;
-
-      const heatPoints = [];
-
-      data.forEach(t => {
-        const boundary = h3.cellToBoundary(t.territory_id, true);
-        const polygon = boundary.map(p => [p[1], p[0]]);
-        const color = colorFromUser(t.owner);
-
-        const popupContent = isAuthenticated
-          ? `
-              <b>Territory</b><br/>
-              Owner: ${t.owner}<br/>
-              Influence: ${t.influence}
-            `
-          : `
-              <b>Territory</b><br/>
-              Owner: *****<br/>
-              Influence: ${Math.min(t.influence, 3)}+
-            `;
-
-        L.polygon(polygon, {
-          color,
-          weight: 2,
-          fillColor: color,
-          fillOpacity: Math.min(0.9, t.influence / 5)
-        })
-        .bindPopup(popupContent)
-        .addTo(territoryLayer);
-
-        const [lat, lng] = h3.cellToLatLng(t.territory_id);
-        heatPoints.push([lat, lng, t.influence]);
-      });
-
-      heatLayer = L.heatLayer(heatPoints, {
-        radius: 30,
-        blur: 20,
-        maxZoom: 17
-      }).addTo(map);
-
-    } catch (err) {
-      console.error("Error loading territories", err);
-    }
-  }
-
-  map.on("zoomend", loadTerritories);
-  loadTerritories();
 </script>
-<!-- LOGIN MODAL -->
-<div id="login-modal" class="modal hidden">
-  <div class="modal-content">
-    <h2>Login</h2>
-    <input id="login-email" type="email" placeholder="Email" />
-    <input id="login-password" type="password" placeholder="Password" />
-    <button onclick="login()">Login</button>
-    <button class="secondary" onclick="closeModals()">Cancel</button>
-  </div>
-</div>
 
-<!-- REGISTER MODAL -->
-<div id="register-modal" class="modal hidden">
-  <div class="modal-content">
-    <h2>Register</h2>
-    <input id="register-email" type="email" placeholder="Email" />
-    <input id="register-username" type="text" placeholder="Username" />
-    <input id="register-password" type="password" placeholder="Password" />
-    <button onclick="register()">Create account</button>
-    <button class="secondary" onclick="closeModals()">Cancel</button>
-  </div>
-</div>
-<footer>
- <p>
-  © Dominion · <a href="privacy.html">Privacy Policy</a> by Derriba Tus Limites SL
- </p>
-</footer>
 </body>
 </html>
