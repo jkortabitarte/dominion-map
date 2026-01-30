@@ -2,130 +2,350 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Dominion · Conquer your territory</title>
+  <title>Dominion · Conquer the map</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
   <style>
+    :root {
+      --bg: #0f0f0f;
+      --card: #1a1a1a;
+      --border: #333;
+      --text: #fff;
+      --muted: #aaa;
+      --primary: #4caf50;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
     body {
       margin: 0;
       font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-      background: radial-gradient(circle at top, #1a1a1a, #000);
-      color: #fff;
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
     }
+
+    /* ---------- HEADER ---------- */
 
     header {
-      padding: 20px;
-      text-align: center;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      background: #111;
     }
 
-    header img {
-      width: 64px;
-      height: 64px;
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: bold;
+      font-size: 1.1rem;
     }
 
-    header h1 {
-      margin: 12px 0 4px;
-      font-size: 2rem;
+    .logo img {
+      height: 28px;
     }
 
-    header p {
-      color: #aaa;
-      margin: 0;
+    #auth-buttons button {
+      margin-left: 8px;
     }
 
-    .hero {
-      padding: 40px 20px;
-      text-align: center;
-      max-width: 900px;
-      margin: auto;
-    }
-
-    .hero h2 {
-      font-size: 1.8rem;
-      margin-bottom: 12px;
-    }
-
-    .hero p {
-      color: #ccc;
-      font-size: 1.05rem;
-    }
-
-    .actions {
-      margin-top: 28px;
-    }
+    /* ---------- BUTTONS ---------- */
 
     button {
-      background: #4caf50;
+      background: var(--primary);
       border: none;
-      padding: 14px 20px;
-      border-radius: 10px;
-      font-size: 1rem;
-      font-weight: 600;
+      padding: 8px 14px;
+      border-radius: 6px;
+      font-weight: bold;
       cursor: pointer;
-      margin: 8px;
+      color: #000;
     }
 
     button.secondary {
       background: transparent;
+      color: var(--text);
       border: 1px solid #555;
-      color: #fff;
     }
 
-    footer {
-      margin-top: 60px;
-      padding: 20px;
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    /* ---------- MAIN ---------- */
+
+    main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .hero {
+      padding: 24px 16px;
       text-align: center;
-      border-top: 1px solid #222;
-      font-size: 0.85rem;
-      color: #777;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .hero h1 {
+      margin: 0 0 8px;
+      font-size: 1.6rem;
+    }
+
+    .hero p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    #map {
+      flex: 1;
+      min-height: 60vh;
+    }
+
+    .cta {
+      padding: 16px;
+      text-align: center;
+      border-top: 1px solid var(--border);
+      background: #111;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    /* ---------- FOOTER ---------- */
+
+    footer {
+      padding: 12px;
+      text-align: center;
+      font-size: 0.8rem;
+      color: var(--muted);
+      border-top: 1px solid var(--border);
+      background: #111;
     }
 
     footer a {
-      color: #4caf50;
+      color: var(--muted);
       text-decoration: none;
+    }
+
+    footer a:hover {
+      text-decoration: underline;
+    }
+
+    /* ---------- MODALS ---------- */
+
+    .modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.75);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+    }
+
+    .modal.hidden {
+      display: none;
+    }
+
+    .modal-content {
+      background: var(--card);
+      border: 1px solid var(--border);
+      padding: 20px;
+      border-radius: 12px;
+      width: 90%;
+      max-width: 360px;
+    }
+
+    .modal-content h3 {
+      margin-top: 0;
+    }
+
+    .modal-content input {
+      width: 100%;
+      padding: 8px;
+      margin-bottom: 10px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: #000;
+      color: var(--text);
+    }
+
+    .modal-content button {
+      width: 100%;
+      margin-top: 8px;
     }
   </style>
 </head>
+
 <body>
 
+<!-- ---------- HEADER ---------- -->
 <header>
-  <!-- Reemplaza src cuando tengas el logo final -->
-  <img src="logo.png" alt="Dominion logo" />
-  <h1>Dominion</h1>
-  <p>Conquer your territory</p>
+  <div class="logo">
+    <!-- Pon aquí tu logo -->
+    <img src="logo.png" alt="Dominion logo" />
+    Dominion
+  </div>
+  <div id="auth-buttons"></div>
 </header>
 
-<section class="hero">
-  <h2>Your activities shape the map</h2>
-  <p>
-    Dominion transforms your real-world activities into territorial influence.
-    Connect Strava, explore new areas, and expand your domain.
-  </p>
+<!-- ---------- MAIN ---------- -->
+<main>
 
-  <div class="actions">
-    <button onclick="goLogin()">Login</button>
-    <button class="secondary" onclick="goRegister()">Create account</button>
+  <div class="hero">
+    <h1>Conquer the world, one activity at a time</h1>
+    <p>Import your Strava activities and dominate the map.</p>
   </div>
-</section>
 
+  <!-- MAP -->
+  <div id="map"></div>
+
+  <div class="cta">
+    🗺️ This is a live preview of the global map.
+    <br />
+    Login to start conquering territories.
+  </div>
+
+</main>
+
+<!-- ---------- FOOTER ---------- -->
 <footer>
-  © 2026 Dominion ·
-  <a href="privacy.html">Privacy Policy</a>
+  © Dominion ·
+  <a href="privacy.html">Privacy policy</a>
 </footer>
 
+<!-- ---------- LOGIN MODAL ---------- -->
+<div id="login-modal" class="modal hidden">
+  <div class="modal-content">
+    <h3>Login</h3>
+    <input id="login-email" placeholder="Email" />
+    <input id="login-password" type="password" placeholder="Password" />
+    <button onclick="login()">Login</button>
+    <button class="secondary" onclick="closeModals()">Cancel</button>
+  </div>
+</div>
+
+<!-- ---------- REGISTER MODAL ---------- -->
+<div id="register-modal" class="modal hidden">
+  <div class="modal-content">
+    <h3>Create account</h3>
+    <input id="register-email" placeholder="Email" />
+    <input id="register-username" placeholder="Username" />
+    <input id="register-password" type="password" placeholder="Password" />
+    <button onclick="register()">Create account</button>
+    <button class="secondary" onclick="closeModals()">Cancel</button>
+  </div>
+</div>
+
 <script>
-  function goLogin() {
-    window.location.href = "login.html";
+  const BACKEND_URL = "https://dominion-backend-production.up.railway.app";
+  const token = localStorage.getItem("token");
+  const isAuthenticated = !!token;
+
+  const authButtons = document.getElementById("auth-buttons");
+
+  // ---------- AUTH BUTTONS ----------
+  if (!isAuthenticated) {
+    authButtons.innerHTML = `
+      <button onclick="showLogin()">Login</button>
+      <button class="secondary" onclick="showRegister()">Create account</button>
+    `;
+  } else {
+    authButtons.innerHTML = `
+      <button onclick="goProfile()">Profile</button>
+      <button class="secondary" onclick="logout()">Logout</button>
+    `;
   }
 
-  function goRegister() {
-    window.location.href = "register.html";
+  function goProfile() {
+    window.location.href = "profile.html";
   }
 
-  // Auto-redirect if already logged in
-  if (localStorage.getItem("token")) {
-    window.location.href = "index.html";
+  function logout() {
+    localStorage.removeItem("token");
+    window.location.reload();
   }
+
+  // ---------- MODALS ----------
+  function showLogin() {
+    document.getElementById("login-modal").classList.remove("hidden");
+  }
+
+  function showRegister() {
+    document.getElementById("register-modal").classList.remove("hidden");
+  }
+
+  function closeModals() {
+    document.getElementById("login-modal").classList.add("hidden");
+    document.getElementById("register-modal").classList.add("hidden");
+  }
+
+  // ---------- LOGIN ----------
+  async function login() {
+    const email = document.getElementById("login-email").value;
+    const password = document.getElementById("login-password").value;
+
+    const form = new URLSearchParams();
+    form.append("username", email);
+    form.append("password", password);
+
+    const res = await fetch(`${BACKEND_URL}/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: form
+    });
+
+    if (!res.ok) {
+      alert("Invalid credentials");
+      return;
+    }
+
+    const data = await res.json();
+    localStorage.setItem("token", data.access_token);
+    closeModals();
+    window.location.reload();
+  }
+
+  // ---------- REGISTER ----------
+  async function register() {
+    const email = document.getElementById("register-email").value;
+    const username = document.getElementById("register-username").value;
+    const password = document.getElementById("register-password").value;
+
+    const res = await fetch(
+      `${BACKEND_URL}/auth/register?email=${email}&username=${username}&password=${password}`,
+      { method: "POST" }
+    );
+
+    if (!res.ok) {
+      alert("Error creating account");
+      return;
+    }
+
+    const data = await res.json();
+    localStorage.setItem("token", data.access_token);
+    closeModals();
+    window.location.reload();
+  }
+
+  // ---------- MAP ----------
+  function loadMap() {
+    // 🔽 AQUÍ VA TU CÓDIGO DEL MAPA
+    // Debe:
+    // - cargar /territories?resolution=7
+    // - NO requerir token
+    // - ser read-only si !isAuthenticated
+    console.log("Loading map (read-only:", !isAuthenticated, ")");
+  }
+
+  loadMap();
 </script>
 
 </body>
