@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <title>Dominion · Profile</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  
+
   <style>
     body {
       margin: 0;
@@ -15,18 +15,19 @@
     }
 
     h1 {
-      font-size: 1.4rem;
+      font-size: 1.5rem;
       margin-bottom: 16px;
     }
 
     h3 {
       margin-top: 0;
+      margin-bottom: 12px;
     }
 
     .card {
       background: #1a1a1a;
       border: 1px solid #333;
-      border-radius: 10px;
+      border-radius: 12px;
       padding: 16px;
       margin-bottom: 16px;
     }
@@ -34,9 +35,9 @@
     button {
       background: #4caf50;
       border: none;
-      padding: 8px 12px;
-      border-radius: 6px;
-      font-weight: bold;
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-weight: 600;
       cursor: pointer;
       margin-right: 8px;
       margin-top: 8px;
@@ -48,27 +49,52 @@
       border: 1px solid #555;
     }
 
+    button.danger {
+      background: #f44336;
+    }
+
     button:disabled {
       opacity: 0.5;
       cursor: not-allowed;
     }
 
     .status {
-      margin-top: 8px;
-      font-size: 0.9rem;
+      margin-bottom: 8px;
+      font-size: 0.95rem;
     }
 
-    .green {
-      color: #4caf50;
-    }
-
-    .red {
-      color: #f44336;
-    }
+    .green { color: #4caf50; }
+    .red { color: #f44336; }
 
     .muted {
       color: #aaa;
       font-size: 0.9rem;
+    }
+
+    /* 📊 Stats */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 12px;
+    }
+
+    .stat {
+      background: #141414;
+      border: 1px solid #333;
+      border-radius: 10px;
+      padding: 12px;
+      text-align: center;
+    }
+
+    .stat-value {
+      font-size: 1.6rem;
+      font-weight: 700;
+      margin-top: 6px;
+    }
+
+    .stat-label {
+      font-size: 0.85rem;
+      color: #aaa;
     }
   </style>
 </head>
@@ -85,12 +111,9 @@
 <!-- USER STATS -->
 <div class="card">
   <h3>📊 Your stats</h3>
-  <ul id="stats">
-    <li>Activities: …</li>
-    <li>Hexes conquered: …</li>
-    <li>Total influence: …</li>
-    <li>Last activity: …</li>
-  </ul>
+  <div id="stats" class="stats-grid">
+    <div class="stat">Loading…</div>
+  </div>
 </div>
 
 <!-- STRAVA -->
@@ -99,6 +122,15 @@
   <p id="strava-status" class="status">Checking status…</p>
 
   <button id="connect-btn" onclick="connectStrava()">Connect Strava</button>
+  <button
+    id="disconnect-btn"
+    class="danger"
+    onclick="disconnectStrava()"
+    style="display:none"
+  >
+    Disconnect Strava
+  </button>
+
   <button
     id="import-btn"
     class="secondary"
@@ -125,48 +157,43 @@
   const userInfoEl = document.getElementById("user-info");
   const statusEl = document.getElementById("strava-status");
   const connectBtn = document.getElementById("connect-btn");
+  const disconnectBtn = document.getElementById("disconnect-btn");
   const importBtn = document.getElementById("import-btn");
 
   function goBack() {
     window.location.href = "index.html";
   }
 
-  // 🔐 Load profile
   async function loadProfile() {
     try {
       const res = await fetch(`${BACKEND_URL}/users/me`, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
+        headers: { Authorization: `Bearer ${token}` }
       });
 
       if (!res.ok) throw new Error("Unauthorized");
-
       const user = await res.json();
 
-      // 👤 User info
       userInfoEl.innerHTML = `
         <p><b>Username:</b> ${user.username}</p>
         <p><b>Email:</b> ${user.email}</p>
         <p><b>Joined:</b> ${new Date(user.created_at).toLocaleDateString()}</p>
       `;
 
-      // 🟢🔴 Strava status
       if (user.strava_connected) {
         statusEl.textContent = "🟢 Strava connected";
         statusEl.className = "status green";
         connectBtn.style.display = "none";
+        disconnectBtn.style.display = "inline-block";
         importBtn.style.display = "inline-block";
       } else {
         statusEl.textContent = "🔴 Strava not connected";
         statusEl.className = "status red";
         connectBtn.style.display = "inline-block";
+        disconnectBtn.style.display = "none";
         importBtn.style.display = "none";
       }
 
-    } catch (err) {
-      console.error(err);
-      alert("Session expired");
+    } catch {
       localStorage.removeItem("token");
       window.location.href = "index.html";
     }
@@ -174,13 +201,21 @@
 
   async function connectStrava() {
     const res = await fetch(`${BACKEND_URL}/strava/connect`, {
-      headers: {
-        Authorization: `Bearer ${token}`
-      }
+      headers: { Authorization: `Bearer ${token}` }
     });
-
     const data = await res.json();
     window.location.href = data.auth_url;
+  }
+
+  async function disconnectStrava() {
+    if (!confirm("Disconnect Strava?")) return;
+
+    await fetch(`${BACKEND_URL}/strava/disconnect`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` }
+    });
+
+    loadProfile();
   }
 
   async function importActivities() {
@@ -190,47 +225,50 @@
     try {
       const res = await fetch(`${BACKEND_URL}/strava/import`, {
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
+        headers: { Authorization: `Bearer ${token}` }
       });
-
       const data = await res.json();
-      alert(
-        `Import finished\n\nImported: ${data.imported}\nSkipped: ${data.skipped}`
-      );
-    } catch {
-      alert("Error importing activities");
+      alert(`Imported: ${data.imported}\nSkipped: ${data.skipped}`);
+      loadStats();
     } finally {
       importBtn.disabled = false;
       importBtn.textContent = "Import activities";
     }
   }
 
-  loadProfile();
   async function loadStats() {
     try {
       const res = await fetch(`${BACKEND_URL}/users/me/stats`, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      })
-
-      const stats = await res.json()
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const s = await res.json();
 
       document.getElementById("stats").innerHTML = `
-        <li>🏃 Activities: <b>${stats.activities}</b></li>
-        <li>⬡ Hexes conquered: <b>${stats.hexes}</b></li>
-        <li>🔥 Total influence: <b>${stats.influence}</b></li>
-        <li>🕒 Last activity: <b>${stats.last_activity ?? "—"}</b></li>
-    `
+        <div class="stat">
+          <div class="stat-label">Activities</div>
+          <div class="stat-value">${s.activities}</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">Hexes</div>
+          <div class="stat-value">${s.hexes}</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">Influence</div>
+          <div class="stat-value">${s.influence}</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">Last activity</div>
+          <div class="stat-value">${s.last_activity ?? "—"}</div>
+        </div>
+      `;
     } catch {
       document.getElementById("stats").innerHTML =
-        "<li>Unable to load stats</li>"
+        "<div class='stat'>Unable to load stats</div>";
     }
   }
 
-  loadStats()
+  loadProfile();
+  loadStats();
 </script>
 
 </body>
